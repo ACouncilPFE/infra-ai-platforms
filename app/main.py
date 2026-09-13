@@ -3,11 +3,13 @@ Placeholder inference API.
 
 Deliberately simple — the point of this project is the platform around it
 (provisioning, CI/CD, observability), not the model. Swap the /predict
-logic for a real model call when you're ready to extend this.
+Logic for a real model call when you're ready to extend this.
 """
+
+import time
 from fastapi import FastAPI
 from pydantic import BaseModel
-import time
+
 
 app = FastAPI(title="Inference API", version="0.1.0")
 
