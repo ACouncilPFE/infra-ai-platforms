@@ -16,33 +16,7 @@ isolated Terraform module. Every design decision is written down in
 
 ## Architecture
 
-```
-                     ┌─────────────────────────────┐
-                     │        GitHub Actions        │
-                     │  lint → test → build → plan  │
-                     │      → apply → deploy         │
-                     └──────────────┬───────────────┘
-                                    │
-                    ┌───────────────▼────────────────┐
-                    │         AWS VPC (10.0.0.0/16)   │
-                    │  ┌────────────────────────────┐ │
-                    │  │   Public Subnet             │ │
-                    │  │  ┌──────────────────────┐  │ │
-                    │  │  │  EC2 t3.micro         │  │ │
-                    │  │  │  k3s (single node)    │  │ │
-                    │  │  │  ┌─────────────────┐  │  │ │
-                    │  │  │  │ inference-api pod│  │  │ │
-                    │  │  │  │ (FastAPI)        │  │  │ │
-                    │  │  │  └─────────────────┘  │  │ │
-                    │  │  └──────────────────────┘  │ │
-                    │  └────────────────────────────┘ │
-                    └──────────────┬───────────────────┘
-                                   │
-                          ┌────────▼────────┐
-                          │   CloudWatch     │
-                          │  metrics + alarm │
-                          └──────────────────┘
-```
+![Architecture diagram](docs/architecture.svg)
 
 ## Repo layout
 
