@@ -1,0 +1,5 @@
+# Copy this file to terraform.tfvars and fill in your own values.
+# terraform.tfvars is gitignored — never commit real values.
+
+key_pair_name    = "your-ec2-key-pair-name"
+ssh_allowed_cidr = "YOUR.IP.ADDR.ESS/32" # find yours at https://checkip.amazonaws.com
