@@ -3,13 +3,12 @@ Placeholder inference API.
 
 Deliberately simple — the point of this project is the platform around it
 (provisioning, CI/CD, observability), not the model. Swap the /predict
-Logic for a real model call when you're ready to extend this.
+logic for a real model call when you're ready to extend this.
 """
-
 import time
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-
 
 app = FastAPI(title="Inference API", version="0.1.0")
 
@@ -41,7 +40,6 @@ def metrics():
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest):
     start = time.time()
-    # Placeholder "prediction" — replace with a real model call.
     prediction = "positive" if len(req.text) % 2 == 0 else "negative"
     latency = (time.time() - start) * 1000
     return PredictResponse(
