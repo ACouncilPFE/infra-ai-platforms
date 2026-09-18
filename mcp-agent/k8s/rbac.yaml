@@ -1,0 +1,30 @@
+# The get_cluster_pods tool needs read access to pods. This grants exactly
+# that — list/get on pods only, nothing else — rather than a broad
+# cluster-admin binding. Least-privilege, matching the same philosophy as
+# the IAM role in the main Terraform config.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mcp-server-pod-reader
+subjects:
+  - kind: ServiceAccount
+    name: mcp-server
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io

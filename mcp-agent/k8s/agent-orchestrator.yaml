@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-orchestrator
+  template:
+    metadata:
+      labels:
+        app: agent-orchestrator
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret 
+      containers:
+        - name: agent-orchestrator
+          image: ghcr.io/acouncilpfe/agent-orchestrator:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MCP_SERVER_URL
+              value: "http://mcp-server:8000"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-orchestrator
+spec:
+  type: NodePort
+  selector:
+    app: agent-orchestrator
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30081
