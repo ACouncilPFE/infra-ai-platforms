@@ -13,13 +13,19 @@ spec:
         app: agent-orchestrator
     spec:
       imagePullSecrets:
-        - name: ghcr-secret 
+        - name: ghcr-secret
       containers:
         - name: agent-orchestrator
           image: ghcr.io/acouncilpfe/agent-orchestrator:latest
           ports:
             - containerPort: 8000
           env:
+            - name: MODEL_BACKEND
+              value: "ollama"
+            - name: OLLAMA_URL
+              value: "http://ollama:11434"
+            - name: OLLAMA_MODEL
+              value: "llama3.2:3b"
             - name: MCP_SERVER_URL
               value: "http://mcp-server:8000"
           resources:
