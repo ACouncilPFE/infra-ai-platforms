@@ -62,7 +62,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push inference-api image
         uses: docker/build-push-action@v6
         with:
           context: app/
@@ -70,6 +70,25 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Build and push mcp-server image
+        uses: docker/build-push-action@v6
+        with:
+          context: mcp-agent/
+          file: mcp-agent/mcp_server/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/acouncilpfe/mcp-server:latest
+            ghcr.io/acouncilpfe/mcp-server:${{ github.sha }}
+
+      - name: Build and push agent-orchestrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: mcp-agent/
+          push: true
+          tags: |
+            ghcr.io/acouncilpfe/agent-orchestrator:latest
+            ghcr.io/acouncilpfe/agent-orchestrator:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -82,4 +101,3 @@ jobs:
         run: |
           echo "Would run:"
           echo "kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/"
-          echo "kubectl --kubeconfig=\$KUBECONFIG set image deployment/inference-api inference-api=${{ env.IMAGE_NAME }}:${{ github.sha }}"
