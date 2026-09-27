@@ -8,7 +8,8 @@ runs identically against Claude or a local Ollama model, controlled by the
 MODEL_BACKEND env var. Nothing in this file needs to change to switch.
 
 The Researcher agent is the one that actually calls out to the MCP
-server's tools (get_cluster_pods, search_docs) via a simple HTTP client.
+server's tools (get_cluster_pods, get_cluster_services,
+get_cluster_deployments, search_docs) via a simple HTTP client.
 """
 import os
 import httpx
@@ -16,6 +17,7 @@ import httpx
 from agents.model_backend import call_model
 
 MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "http://mcp-server:8000")
+DOC_TERMS = ["k3s", "terraform", "mcp", "prometheus", "grafana"]
 
 
 def call_mcp_tool(tool_name: str, **kwargs) -> str:
@@ -36,10 +38,13 @@ def planner_agent(task: str) -> str:
     """Breaks the task down into what information is needed."""
     prompt = (
         f"You are a planning agent. Given this task, list which of "
-        f"these two tools would help answer it, and why, in 2-3 "
-        f"sentences: get_cluster_pods (live pod status from a "
-        f"Kubernetes cluster), search_docs (definitions of infra/AI "
-        f"terms like k3s, terraform, mcp, prometheus).\n\nTask: {task}"
+        f"these tools would help answer it, and why, in 2-3 "
+        f"sentences: get_cluster_pods (live pod status), "
+        f"get_cluster_services (service exposure and ports), "
+        f"get_cluster_deployments (deployment rollout and replica health), "
+        f"search_docs (definitions of infra/AI terms like k3s, terraform, "
+        f"mcp, prometheus, grafana). Use the exact tool names when you "
+        f"reference them.\n\nTask: {task}"
     )
     return call_model(prompt, max_tokens=300)
 
@@ -48,14 +53,43 @@ def researcher_agent(task: str, plan: str) -> str:
     """Decides which tool(s) to actually call based on the plan, calls them,
     and returns the raw findings."""
     findings = []
+    task_lower = task.lower()
+    plan_lower = plan.lower()
 
-    if "cluster" in plan.lower() or "pod" in plan.lower():
+    if any(keyword in task_lower for keyword in ["pod", "pods", "cluster", "workload"]):
         findings.append("get_cluster_pods result:\n" + call_mcp_tool("get_cluster_pods", namespace="default"))
 
-    if "search_docs" in plan.lower() or "term" in plan.lower() or "definition" in plan.lower():
-        for term in ["k3s", "terraform", "mcp", "prometheus"]:
-            if term in task.lower():
+    if any(keyword in task_lower for keyword in ["service", "services", "port", "expose"]):
+        findings.append(
+            "get_cluster_services result:\n"
+            + call_mcp_tool("get_cluster_services", namespace="default")
+        )
+
+    if any(keyword in task_lower for keyword in ["deployment", "deployments", "replica", "rollout"]):
+        findings.append(
+            "get_cluster_deployments result:\n"
+            + call_mcp_tool("get_cluster_deployments", namespace="default")
+        )
+
+    if "search_docs" in plan_lower or "term" in plan_lower or "definition" in plan_lower:
+        for term in DOC_TERMS:
+            if term in task_lower:
                 findings.append(f"search_docs('{term}') result:\n" + call_mcp_tool("search_docs", query=term))
+
+    if not findings and "get_cluster_pods" in plan_lower:
+        findings.append("get_cluster_pods result:\n" + call_mcp_tool("get_cluster_pods", namespace="default"))
+
+    if not findings and "get_cluster_services" in plan_lower:
+        findings.append(
+            "get_cluster_services result:\n"
+            + call_mcp_tool("get_cluster_services", namespace="default")
+        )
+
+    if not findings and "get_cluster_deployments" in plan_lower:
+        findings.append(
+            "get_cluster_deployments result:\n"
+            + call_mcp_tool("get_cluster_deployments", namespace="default")
+        )
 
     if not findings:
         findings.append("No tool calls were needed for this task based on the plan.")

@@ -1,0 +1,29 @@
+logger=settings t=2026-09-27T17:13:25.899044964Z level=info msg="Starting Grafana" version= commit= branch= compiled=1970-01-01T00:00:00Z
+logger=settings t=2026-09-27T17:13:25.8996361Z level=info msg="Config loaded from" file=/usr/share/grafana/conf/defaults.ini
+logger=settings t=2026-09-27T17:13:25.899720405Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_DATA=/var/lib/grafana"
+logger=settings t=2026-09-27T17:13:25.899751407Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_LOGS=/var/log/grafana"
+logger=settings t=2026-09-27T17:13:25.899785109Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_PLUGINS=/var/lib/grafana/plugins"
+logger=settings t=2026-09-27T17:13:25.899822511Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_PROVISIONING=/etc/grafana/provisioning"
+logger=settings t=2026-09-27T17:13:25.899854613Z level=info msg="Config overridden from Environment variable" var="GF_DATABASE_TYPE=sqlite3"
+logger=settings t=2026-09-27T17:13:25.899907216Z level=info msg="Config overridden from Environment variable" var="GF_DATABASE_WAL=true"
+logger=settings t=2026-09-27T17:13:25.899934418Z level=info msg="Config overridden from Environment variable" var="GF_DATABASE_QUERY_RETRIES=10"
+logger=settings t=2026-09-27T17:13:25.899989821Z level=info msg="Config overridden from Environment variable" var="GF_DATABASE_TRANSACTION_RETRIES=10"
+logger=settings t=2026-09-27T17:13:25.900050125Z level=info msg="Config overridden from Environment variable" var="GF_SECURITY_ADMIN_USER=admin"
+logger=settings t=2026-09-27T17:13:25.900114129Z level=info msg="Config overridden from Environment variable" var="GF_SECURITY_ADMIN_PASSWORD=*********"
+logger=settings t=2026-09-27T17:13:25.900148131Z level=info msg=Target target=[all]
+logger=settings t=2026-09-27T17:13:25.900240237Z level=info msg="Path Home" path=/usr/share/grafana
+logger=settings t=2026-09-27T17:13:25.900273839Z level=info msg="Path Data" path=/var/lib/grafana
+logger=settings t=2026-09-27T17:13:25.90029944Z level=info msg="Path Logs" path=/var/log/grafana
+logger=settings t=2026-09-27T17:13:25.900323342Z level=info msg="Path Plugins" path=/var/lib/grafana/plugins
+logger=settings t=2026-09-27T17:13:25.900359344Z level=info msg="Path Provisioning" path=/etc/grafana/provisioning
+logger=settings t=2026-09-27T17:13:25.900397446Z level=info msg="App mode production"
+logger=featuremgmt t=2026-09-27T17:13:25.901018484Z level=info msg=FeatureToggles cloudWatchNewLabelParsing=true lokiStructuredMetadata=true panelMonitoring=true transformationsVariableSupport=true exploreMetrics=true recoveryThreshold=true annotationPermissionUpdate=true ssoSettingsApi=true awsAsyncQueryCaching=true prometheusAzureOverrideAudience=true kubernetesPlaylists=true logRowsPopoverMenu=true nestedFolders=true lokiMetricDataplane=true tlsMemcached=true recordedQueriesMulti=true autoMigrateXYChartPanel=true influxdbBackendMigration=true correlations=true alertingNoDataErrorExecution=true managedPluginsInstall=true formatString=true logsContextDatasourceUi=true logsInfiniteScrolling=true alertingInsights=true prometheusConfigOverhaulAuth=true dashgpt=true cloudWatchCrossAccountQuerying=true groupToNestedTableTransformation=true alertingSimplifiedRouting=true prometheusDataplane=true addFieldFromCalculationStatFunctions=true topnav=true angularDeprecationUI=true dataplaneFrontendFallback=true logsExploreTableVisualisation=true publicDashboards=true prometheusMetricEncyclopedia=true lokiQueryHints=true lokiQuerySplitting=true cloudWatchRoundUpEndTime=true transformationsRedesign=true
+logger=sqlstore t=2026-09-27T17:13:25.902294961Z level=info msg="Connecting to DB" dbtype=sqlite3
+logger=migrator t=2026-09-27T17:13:26.004122715Z level=info msg="Locking database"
+logger=migrator t=2026-09-27T17:13:26.004246923Z level=info msg="Starting DB migrations"
+logger=migrator t=2026-09-27T17:13:26.108615731Z level=info msg="migrations completed" performed=0 skipped=594 duration=724.344┬╡s
+logger=migrator t=2026-09-27T17:13:26.109803903Z level=info msg="Unlocking database"
+logger=secrets t=2026-09-27T17:13:26.110724259Z level=info msg="Envelope encryption state" enabled=true currentprovider=secretKey.v1
+
+Admin password changed successfully Γ£ö
+

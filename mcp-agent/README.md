@@ -7,9 +7,10 @@ are distinct from a plain inference API:
 
 - **MCP (Model Context Protocol)**: a standard way for an AI agent to
   discover and call external tools. The MCP server here (`mcp_server/`)
-  exposes two tools: `get_cluster_pods` (queries the *live* k3s cluster
-  this project runs on — real infra, not mocked data) and `search_docs`
-  (keyword lookup over a small local knowledge base).
+  exposes four tools: `get_cluster_pods`, `get_cluster_services`,
+  `get_cluster_deployments` (all query the *live* k3s cluster this project
+  runs on — real infra, not mocked data) and `search_docs` (keyword lookup
+  over a small local knowledge base).
 - **Multi-agent orchestration**: a task is handled by three agents in
   sequence — a Planner decides what information is needed, a Researcher
   calls the MCP tools to gather it, and a Writer produces the final
@@ -32,10 +33,14 @@ POST /run {"task": "..."}
               calls MCP server tools over HTTP
                         |
                         v
-              mcp-server (get_cluster_pods, search_docs)
+              mcp-server (get_cluster_pods, get_cluster_services,
+                          get_cluster_deployments, search_docs)
                         |
                         v
-              Kubernetes API (live pod status)
+              Kubernetes API (live pod, service, and deployment data)
+
+Prometheus scrapes `/metrics` from the FastAPI services, and Grafana ships
+with a pre-provisioned Prometheus datasource for quick dashboarding.
 ```
 
 ## Running it
@@ -66,7 +71,18 @@ kubectl create secret generic anthropic-api-key --from-literal=api-key=YOUR_KEY_
 kubectl apply -f k8s/rbac.yaml
 kubectl apply -f k8s/mcp-server.yaml
 kubectl apply -f k8s/agent-orchestrator.yaml
+kubectl apply -f k8s/monitoring.yaml
 ```
+
+**Monitoring:**
+
+- Prometheus: `http://<node-ip>:30082`
+- Grafana: `http://<node-ip>:30083` (default demo credentials: `admin` / `admin`)
+
+Grafana starts with a Prometheus datasource already configured against the
+in-cluster `prometheus` service. Prometheus scrapes `mcp-server` and
+`agent-orchestrator` by default; add `inference-api` as another target if
+you deploy that service into the same cluster.
 
 **Try it:**
 
@@ -75,6 +91,12 @@ curl -X POST http://<node-ip>:30081/run \
   -H "Content-Type: application/json" \
   -d '{"task": "What pods are currently running in the cluster, and what is k3s?"}'
 ```
+
+You can also ask richer infra questions now, for example:
+
+- `What services are exposed in the cluster?`
+- `Which deployments are healthy right now?`
+- `What services are exposed, and what is Grafana?`
 
 The response includes every stage's output (`plan`, `findings`, `answer`)
 so you can see the mechanism working, not just the final text — useful for

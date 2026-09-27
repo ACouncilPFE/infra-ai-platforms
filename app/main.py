@@ -9,8 +9,10 @@ import time
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="Inference API", version="0.1.0")
+Instrumentator().instrument(app).expose(app)
 
 START_TIME = time.time()
 
@@ -29,12 +31,6 @@ class PredictResponse(BaseModel):
 def health():
     """Used by the k8s liveness/readiness probes."""
     return {"status": "ok", "uptime_seconds": time.time() - START_TIME}
-
-
-@app.get("/metrics")
-def metrics():
-    """Minimal metrics endpoint — swap for prometheus_client if you extend this."""
-    return {"uptime_seconds": time.time() - START_TIME}
 
 
 @app.post("/predict", response_model=PredictResponse)

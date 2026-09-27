@@ -1,19 +1,24 @@
-"""
-MCP server exposing two tools over HTTP:
+"""Tool server exposing infra helpers over HTTP for the orchestrator.
 
-1. get_cluster_pods — queries the *actual* k3s cluster this project runs on
-   for live pod status. This is deliberately real, not mocked: it proves
-   the MCP layer can reach into real infrastructure, not just toy data.
-2. search_docs — simple keyword search over a small local knowledge base.
-
-Uses the official `mcp` Python SDK with the streamable-HTTP transport, so
-this can run as a normal container behind a Service — the same deployment
-pattern as inference-api, not a special MCP-only setup.
+The orchestrator calls /tools/<tool_name> with JSON payloads and expects
+{"result": "..."}. This implementation keeps that contract explicit so the
+service boots reliably in-cluster without MCP transport/version coupling.
 """
-from mcp.server.fastmcp import FastMCP
+import os
+
+import uvicorn
+from fastapi import FastAPI
 from kubernetes import client, config
+from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
-mcp = FastMCP("infra-platform-tools")
+app = FastAPI(title="infra-platform-tools", version="0.1.0")
+_instrumentator = Instrumentator().instrument(app)
+
+
+@app.on_event("startup")
+async def _expose_metrics() -> None:
+    _instrumentator.expose(app)
 
 # --- Tiny local knowledge base for the search_docs tool ---
 DOCS = {
@@ -21,19 +26,39 @@ DOCS = {
     "terraform": "Terraform is HashiCorp's infrastructure-as-code tool. It uses a declarative HCL configuration to provision and track cloud resources, storing their state so future runs can compute a diff (plan) before applying changes.",
     "mcp": "The Model Context Protocol (MCP) is a standard that lets an AI model or agent discover and call external tools and data sources in a structured way, separate from the model's own inference.",
     "prometheus": "Prometheus is a metrics collection and alerting system that scrapes numeric time-series data from configured targets on a schedule and stores it for querying via PromQL.",
+    "grafana": "Grafana is a visualization and dashboard platform often paired with Prometheus to explore metrics, build dashboards, and configure alerts from time-series data sources.",
 }
 
+_KUBE_CONFIG_LOADED = False
 
-@mcp.tool()
-def get_cluster_pods(namespace: str = "default") -> str:
-    """Get the current status of all pods in a given Kubernetes namespace
-    on the live cluster this platform runs on."""
+
+def _ensure_kube_config_loaded() -> None:
+    global _KUBE_CONFIG_LOADED
+    if _KUBE_CONFIG_LOADED:
+        return
+
     try:
         config.load_incluster_config()
     except config.ConfigException:
         config.load_kube_config()
 
-    v1 = client.CoreV1Api()
+    _KUBE_CONFIG_LOADED = True
+
+
+def _core_v1_api() -> client.CoreV1Api:
+    _ensure_kube_config_loaded()
+    return client.CoreV1Api()
+
+
+def _apps_v1_api() -> client.AppsV1Api:
+    _ensure_kube_config_loaded()
+    return client.AppsV1Api()
+
+
+def get_cluster_pods(namespace: str = "default") -> str:
+    """Get the current status of all pods in a given Kubernetes namespace
+    on the live cluster this platform runs on."""
+    v1 = _core_v1_api()
     pods = v1.list_namespaced_pod(namespace=namespace)
 
     if not pods.items:
@@ -48,7 +73,50 @@ def get_cluster_pods(namespace: str = "default") -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+def get_cluster_services(namespace: str = "default") -> str:
+    """Get the services currently exposed in a Kubernetes namespace."""
+    v1 = _core_v1_api()
+    services = v1.list_namespaced_service(namespace=namespace)
+
+    if not services.items:
+        return f"No services found in namespace '{namespace}'."
+
+    lines = [f"Services in namespace '{namespace}':"]
+    for service in services.items:
+        ports = ", ".join(
+            f"{port.port}/{port.protocol} -> {port.target_port}"
+            for port in (service.spec.ports or [])
+        ) or "no ports"
+        cluster_ip = service.spec.cluster_ip or "<none>"
+        service_type = service.spec.type or "ClusterIP"
+        lines.append(
+            f"  - {service.metadata.name}: {service_type} "
+            f"(cluster IP: {cluster_ip}, ports: {ports})"
+        )
+    return "\n".join(lines)
+
+
+def get_cluster_deployments(namespace: str = "default") -> str:
+    """Get deployment rollout and replica health in a namespace."""
+    apps_v1 = _apps_v1_api()
+    deployments = apps_v1.list_namespaced_deployment(namespace=namespace)
+
+    if not deployments.items:
+        return f"No deployments found in namespace '{namespace}'."
+
+    lines = [f"Deployments in namespace '{namespace}':"]
+    for deployment in deployments.items:
+        desired = deployment.spec.replicas or 0
+        ready = deployment.status.ready_replicas or 0
+        updated = deployment.status.updated_replicas or 0
+        available = deployment.status.available_replicas or 0
+        lines.append(
+            f"  - {deployment.metadata.name}: desired={desired}, "
+            f"updated={updated}, ready={ready}, available={available}"
+        )
+    return "\n".join(lines)
+
+
 def search_docs(query: str) -> str:
     """Search a small local knowledge base of infra/AI terms and return
     the matching explanation, if any."""
@@ -59,5 +127,46 @@ def search_docs(query: str) -> str:
     return f"No local documentation found for '{query}'. Known terms: {', '.join(DOCS.keys())}"
 
 
+class ClusterPodsRequest(BaseModel):
+    namespace: str = "default"
+
+
+class ClusterServicesRequest(BaseModel):
+    namespace: str = "default"
+
+
+class ClusterDeploymentsRequest(BaseModel):
+    namespace: str = "default"
+
+
+class SearchDocsRequest(BaseModel):
+    query: str
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@app.post("/tools/get_cluster_pods")
+def get_cluster_pods_tool(req: ClusterPodsRequest) -> dict:
+    return {"result": get_cluster_pods(req.namespace)}
+
+
+@app.post("/tools/get_cluster_services")
+def get_cluster_services_tool(req: ClusterServicesRequest) -> dict:
+    return {"result": get_cluster_services(req.namespace)}
+
+
+@app.post("/tools/get_cluster_deployments")
+def get_cluster_deployments_tool(req: ClusterDeploymentsRequest) -> dict:
+    return {"result": get_cluster_deployments(req.namespace)}
+
+
+@app.post("/tools/search_docs")
+def search_docs_tool(req: SearchDocsRequest) -> dict:
+    return {"result": search_docs(req.query)}
+
+
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8000")))

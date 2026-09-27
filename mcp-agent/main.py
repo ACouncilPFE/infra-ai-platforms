@@ -5,10 +5,17 @@ already built (Terraform, k3s, CI/CD) rather than needing new infrastructure.
 """
 from fastapi import FastAPI
 from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents.orchestrator import run_agent_workflow
 
 app = FastAPI(title="Multi-agent MCP demo", version="0.1.0")
+_instrumentator = Instrumentator().instrument(app)
+
+
+@app.on_event("startup")
+async def _expose_metrics() -> None:
+    _instrumentator.expose(app)
 
 
 class TaskRequest(BaseModel):
